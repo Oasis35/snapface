@@ -1,4 +1,7 @@
-import { Component, OnInit} from '@angular/core';
+import { Component, OnInit, Input} from '@angular/core';
+import { FaceSnap } from '../models/face-snap.model';
+import { FaceSnapsService } from '../services/face-snaps.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-face-snap',
@@ -6,21 +9,37 @@ import { Component, OnInit} from '@angular/core';
   styleUrls: ['./face-snap.component.scss']
 })
 export class FaceSnapComponent implements OnInit {
-  title!: string;
-  description!:  string;
-  createdDate!: Date;
-  snaps!: number;
-  imageUrl!: string;
 
-  ngOnInit(): void {
-    this.title = 'John Does';
-    this.description = 'Un super pote';
-    this.createdDate = new Date();
-    this.snaps = 6;
-    this.imageUrl = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+@Input() faceSnap!: FaceSnap;
+
+constructor(private faceSnapsService: FaceSnapsService,
+            private router : Router) { }
+
+  titrebouton!: string;
+  snap!: boolean;
+
+  ngOnInit(): void 
+  {
+    this.titrebouton='Oh Snap !';
+    this.snap = false;
   }
 
-  onAddSnap(){
-    this.snaps ++;
+  onClickSnap(): void{
+    if (this.snap == false)
+    {
+      this.faceSnapsService.snapFaceSnapById(this.faceSnap.id, 'snap')
+      this.snap = true;
+      this.titrebouton='Oops, un Snap!';
+    }
+    else if (this.snap == true)
+    {
+      this.faceSnapsService.snapFaceSnapById(this.faceSnap.id, 'unsnap')
+      this.snap = false;
+      this.titrebouton='Oh Snap !';
+    }
+  }
+
+  onViewFaceSnap() {
+    this.router.navigateByUrl(`facesnaps/${this.faceSnap.id}`);
   }
 }
