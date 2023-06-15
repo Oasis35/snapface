@@ -1,58 +1,51 @@
 import {Injectable} from '@angular/core';
 import {FaceSnap} from '../models/face-snap.model';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs/internal/Observable';
+import { map } from 'rxjs/internal/operators/map';
+import { switchMap } from 'rxjs/internal/operators/switchMap';
 
 @Injectable({
     providedIn: 'root'
 })
 export class FaceSnapsService {
-    faceSnaps: FaceSnap[] = [
-        {
-            id: 1,
-            title: 'john doe',
-            description : 'Un super gars', 
-            createdDate: new Date(),
-            snaps: 0,
-            imageUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-            location: 'Lyon'
-        },
-        {
-            id: 2,
-            title : 'Pierre Martin',
-            description : 'Unique au monde', 
-            createdDate: new Date(),
-            snaps: 0,
-            imageUrl: 'https://us.123rf.com/450wm/happyvector071/happyvector0711904/happyvector071190414500/120957417-illustration-cr%C3%A9ative-de-l-espace-r%C3%A9serv%C3%A9-de-profil-d-avatar-par-d%C3%A9faut-isol%C3%A9-sur-fond-maquette-de.jpg?ver=6',
-            location : 'Rennes'
-        },
-        {
-            id: 3,
-            title : 'Antoine Dupont',
-            description : 'Encore une identité folle', 
-            createdDate: new Date(),
-            snaps: 0,
-            imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdPDar96daoFgWQ2Sck4bmtt3EZreS6G8P-g&usqp=CAU'
-            }
-      ];
+    constructor(private http: HttpClient) {}
 
-        getAllFaceSnaps() : FaceSnap[] 
-        {
-            return this.faceSnaps;
-        }
+    faceSnaps: FaceSnap[] = [];
 
-        getFaceSnapById(faceSnapId: number) : FaceSnap{
-            const faceSnap = this.faceSnaps.find(faceSnap => faceSnap.id === faceSnapId);
-            if (!faceSnap) {
-                throw new Error('FaceSnap not found!');
-            }
-            else {
-                return faceSnap;
-            }
-        }
+    getAllFaceSnaps() : Observable<FaceSnap[]>
+    {
+        return this.http.get<FaceSnap[]>('http://localhost:3000/facesnaps');
+    }
 
-        snapFaceSnapById(faceSnapId: number, snapType: 'snap'|'unsnap'): void 
-        {
-            const faceSnap = this.getFaceSnapById(faceSnapId);
-            
-            snapType === 'snap' ? faceSnap.snaps++ : faceSnap.snaps--;
-        }
+    getFaceSnapById(faceSnapId: number) : Observable<FaceSnap>{
+        return this.http.get<FaceSnap>(`http://localhost:3000/facesnaps/${faceSnapId}`);
+    }
+
+    snapFaceSnapById(faceSnapId: number, snapType: 'snap'|'unsnap'): Observable<FaceSnap> 
+    {
+        return this.getFaceSnapById(faceSnapId).pipe(
+            map(faceSnap => ({
+                ...faceSnap,
+            snaps: faceSnap.snaps + (snapType === 'snap' ? 1 : -1)})),
+            switchMap(updatedFaceSnap => this.http.put<FaceSnap>(`http://localhost:3000/facesnaps/${faceSnapId}`,updatedFaceSnap))
+        );
+    }
+
+    addFaceSnap(formValue: { title: string, description: string, imageUrl: string, location?: string }): Observable<FaceSnap> {
+        return this.getAllFaceSnaps().pipe(
+             map(facesnaps => [...facesnaps].sort((a,b) => a.id - b.id)),
+             map(sortedFacesnaps => sortedFacesnaps[sortedFacesnaps.length - 1]),
+             map(previousFacesnap => ({
+                ...formValue,
+                snaps: 0,
+                createdDate: new Date(),
+                id: previousFacesnap.id + 1
+            })),
+            switchMap(newFacesnap => this.http.post<FaceSnap>(
+                'http://localhost:3000/facesnaps',
+                newFacesnap)
+            )
+        );
+      }
 }
